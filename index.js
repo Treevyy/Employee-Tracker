@@ -7,7 +7,7 @@ async function mainMenu() {
         type: 'list',
         name: 'action',
         message: 'What would you like to do?',
-        Choices: [
+        choices: [
             'View all departments',
             'View all roles',
             'View all employees',
