@@ -19,7 +19,6 @@ async function mainMenu() {
         ]
         }
     ])
-};
 
 switch (action) {
     case 'View all departments':
@@ -46,6 +45,7 @@ switch (action) {
     case 'Exit':
         pool.end();
         process.exit();
+    }   
 }
 
 async function viewDepartments() {
