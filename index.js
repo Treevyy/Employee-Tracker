@@ -57,10 +57,11 @@ async function viewDepartments() {
 }
 
 async function viewRoles() {
-    const res = await pool.query('SELECT role.id, role.title, role.salary, department.name FROM role JOIN department ON role.department_id = department.id');
+    const res = await pool.query('SELECT role.id, role.title, role.salary, department.name AS department FROM role JOIN department ON role.department_id = department.id');
     console.table(res.rows);
     mainMenu();
 }
+
 async function viewEmployees() {
     const res = await pool.query('SELECT * FROM employee');
     console.table(res.rows);
