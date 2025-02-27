@@ -1,9 +1,9 @@
-const inquirer = require('inquirer');
-const pool = require('./db/config.js');
+import inquirer from 'inquirer';
+import pool from './db/config.js';
 
 async function mainMenu() {
-    const { action } = await inquirer.prompt([
-        {
+let questions = [
+    {
         type: 'list',
         name: 'action',
         message: 'What would you like to do?',
@@ -17,10 +17,12 @@ async function mainMenu() {
             'Update an employee role',
             'Exit'
         ]
-        }
-    ])
+    }
+];
 
-switch (action) {
+const answers = await inquirer.prompt(questions);
+
+switch (answers.action) {
     case 'View all departments':
         viewDepartments();
         break;
@@ -45,7 +47,7 @@ switch (action) {
     case 'Exit':
         pool.end();
         process.exit();
-    }   
+    }
 }
 
 async function viewDepartments() {
@@ -55,7 +57,7 @@ async function viewDepartments() {
 }
 
 async function viewRoles() {
-    const res = await pool.query('SELECT * FROM role');
+    const res = await pool.query('SELECT role.id, role.title, role.salary, department.name FROM role JOIN department ON role.department_id = department.id');
     console.table(res.rows);
     mainMenu();
 }
