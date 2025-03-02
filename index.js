@@ -15,6 +15,7 @@ const questions = [
             'Add a role',
             'Add an employee',
             'Update an employee role',
+            'View employees by manager',
             'Delete an employee',
             'Exit'
         ]
@@ -44,6 +45,9 @@ switch (answers.action) {
         break;
     case 'Update an employee role':
         updateEmployeeRole();
+        break;
+    case 'View employees by manager':
+        viewEmployeesByManager();
         break;
     case 'Delete an employee':
         deleteEmployee();
@@ -237,6 +241,53 @@ async function updateEmployeeRole() {
 
     await pool.query('UPDATE employee SET role_id = $1, manager_id = $2 WHERE id = $3', [new_role_id, new_manager_id, employee_id]);
     console.log(`Employee role for '${selectedEmployee.name}' has been updated!`);
+    mainMenu();
+}
+
+async function viewEmployeesByManager() {
+    const managersRes = await pool.query(`
+        SELECT DISTINCT manager.id, manager.first_name, manager.last_name
+        FROM employee
+        INNER JOIN employee AS manager ON employee.manager_id = manager.id
+    `);
+    const managers = managersRes.rows;
+    const managerChoices = managers.map(manager => ({
+        name: `${manager.first_name} ${manager.last_name}`,
+        value: manager.id
+    }));
+    managerChoices.unshift({ name: 'Exit', value: null });
+
+    const { manager_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'manager_id',
+            message: 'Select a manager to view their employees:',
+            choices: managerChoices
+        }
+    ]);
+
+    if (manager_id === null) {
+        return mainMenu();
+    }
+
+    const queryText = `
+        SELECT
+          employee.id,
+          employee.first_name,
+          employee.last_name,
+          role.title,
+          department.name AS department,
+          role.salary,  
+          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
+        FROM employee
+        LEFT JOIN role ON employee.role_id = role.id
+        LEFT JOIN department ON role.department_id = department.id
+        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
+        WHERE employee.manager_id = $1
+        ORDER BY employee.id ASC;
+    `;
+    const res = await pool.query(queryText, [manager_id]);
+    console.table(res.rows);
     mainMenu();
 }
 
