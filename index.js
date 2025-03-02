@@ -15,6 +15,7 @@ const questions = [
             'Add a role',
             'Add an employee',
             'Update an employee role',
+            'Update an employee manager',
             'View employees by manager',
             'View employees by department',
             'Delete an employee',
@@ -46,6 +47,9 @@ switch (answers.action) {
         break;
     case 'Update an employee role':
         updateEmployeeRole();
+        break;
+    case 'Update an employee manager':
+        updateEmployeeManager();
         break;
     case 'View employees by manager':
         viewEmployeesByManager();
@@ -249,50 +253,50 @@ async function updateEmployeeRole() {
     mainMenu();
 }
 
-async function viewEmployeesByManager() {
-    const managersRes = await pool.query(`
-        SELECT DISTINCT manager.id, manager.first_name, manager.last_name
-        FROM employee
-        INNER JOIN employee AS manager ON employee.manager_id = manager.id
-    `);
-    const managers = managersRes.rows;
-    const managerChoices = managers.map(manager => ({
-        name: `${manager.first_name} ${manager.last_name}`,
-        value: manager.id
+async function updateEmployeeManager() {
+    const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
+    const employees = employeesRes.rows;
+    const employeeChoices = employees.map(employee => ({
+        name: `${employee.first_name} ${employee.last_name}`,
+        value: employee.id
     }));
-    managerChoices.unshift({ name: 'Exit', value: null });
+    employeeChoices.unshift({ name: 'Exit', value: null }); // Add "Exit" option
 
-    const { manager_id } = await inquirer.prompt([
+    const { employee_id } = await inquirer.prompt([
         {
             type: 'list',
-            name: 'manager_id',
-            message: 'Select a manager to view their employees:',
+            name: 'employee_id',
+            message: `Which employee's manager would you like to update?`,
+            choices: employeeChoices
+        }
+    ]);
+
+    if (employee_id === null) {
+        return mainMenu(); // Return to main menu if "Exit" is selected
+    }
+
+    // Filter out the selected employee from the list of potential new managers
+    const managerChoices = employees
+        .filter(employee => employee.id !== employee_id)
+        .map(employee => ({
+            name: `${employee.first_name} ${employee.last_name}`,
+            value: employee.id
+        }));
+    managerChoices.unshift({ name: 'None', value: null });
+
+    const { new_manager_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'new_manager_id',
+            message: 'Who is the new manager of the employee?',
             choices: managerChoices
         }
     ]);
 
-    if (manager_id === null) {
-        return mainMenu();
-    }
+    const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
 
-    const queryText = `
-        SELECT
-          employee.id,
-          employee.first_name,
-          employee.last_name,
-          role.title,
-          department.name AS department,
-          role.salary,  
-          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON role.department_id = department.id
-        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
-        WHERE employee.manager_id = $1
-        ORDER BY employee.id ASC;
-    `;
-    const res = await pool.query(queryText, [manager_id]);
-    console.table(res.rows);
+    await pool.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [new_manager_id, employee_id]);
+    console.log(`Employee manager for '${selectedEmployee.name}' has been updated!`);
     mainMenu();
 }
 
