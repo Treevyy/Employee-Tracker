@@ -18,6 +18,7 @@ const questions = [
             'Update an employee manager',
             'View employees by manager',
             'View employees by department',
+            'Delete a department',
             'Delete an employee',
             'Exit'
         ]
@@ -56,6 +57,9 @@ switch (answers.action) {
         break;
     case 'View employees by department':
         viewEmployeesByDepartment();
+        break;
+    case 'Delete a department':
+        deleteDepartment();
         break;
     case 'Delete an employee':
         deleteEmployee();
@@ -431,6 +435,38 @@ async function viewEmployeesByDepartment() {
     `;
     const res = await pool.query(queryText, [department_id]);
     console.table(res.rows);
+    mainMenu();
+}
+
+async function deleteDepartment() {
+    const departmentsRes = await pool.query('SELECT id, name FROM department');
+    const departments = departmentsRes.rows;
+    const departmentChoices = departments.map(department => ({
+        name: department.name,
+        value: department.id
+    }));
+    
+    if (!departmentChoices.some(choice => choice.name === 'None')) {
+        departmentChoices.unshift({ name: 'None', value: null });
+    }
+
+    const { department_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'department_id',
+            message: 'Which department would you like to delete?',
+            choices: departmentChoices
+        }
+    ]);
+
+    if (department_id === null) {
+        console.log(`No departments were deleted!`);
+        return mainMenu();
+    }
+
+    const selectedDepartment = departmentChoices.find(department => department.value === department_id);
+    await pool.query('DELETE FROM department WHERE id = $1', [department_id]);
+    console.log(`Department '${selectedDepartment.name}' has been deleted!`);
     mainMenu();
 }
 
