@@ -107,6 +107,18 @@ async function viewEmployees() {
 }
 
 async function addDepartment() {
+    const { confirm } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'confirm',
+            message: 'Do you want to add a new department?',
+            default: false
+        }
+    ]);
+
+    if (!confirm) {
+        return mainMenu();
+    }
 
     const { name } = await inquirer.prompt([
         {
@@ -122,6 +134,19 @@ async function addDepartment() {
 }
 
 async function addRole() {
+    const { confirm } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'confirm',
+            message: 'Do you want to add a new role?',
+            default: false
+        }
+    ]);
+
+    if (!confirm) {
+        return mainMenu();
+    }
+
     const departmentsRes = await pool.query('SELECT id, name FROM department');
     const departments = departmentsRes.rows;
     const departmentChoices = departments.map(department => ({
@@ -154,6 +179,18 @@ async function addRole() {
 }
 
 async function addEmployee() {
+    const { confirm } = await inquirer.prompt([
+        {
+            type: 'confirm',
+            name: 'confirm',
+            message: 'Do you want to add a new employee?',
+            default: false
+        }
+    ]);
+
+    if (!confirm) {
+        return mainMenu();
+    }
 
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
     const employees = employeesRes.rows;
@@ -211,6 +248,7 @@ async function updateEmployeeRole() {
         name: `${employee.first_name} ${employee.last_name}`,
         value: employee.id
     }));
+    employeeChoices.unshift({ name: 'Exit', value: null });
 
     const rolesRes = await pool.query('SELECT id, title FROM role');
     const roles = rolesRes.rows;
@@ -224,14 +262,21 @@ async function updateEmployeeRole() {
         value: employee.id
     }));
     managerChoices.unshift({ name: 'None', value: null });
-    
-    const { employee_id, new_role_id, new_manager_id} = await inquirer.prompt([
+
+    const { employee_id } = await inquirer.prompt([
         {
             type: 'list',
             name: 'employee_id',
             message: `Which employee's role would you like to update?`,
             choices: employeeChoices
-        },
+        }
+    ]);
+
+    if (employee_id === null) {
+        return mainMenu();
+    }
+
+    const { new_role_id, new_manager_id } = await inquirer.prompt([
         {
             type: 'list',
             name: 'new_role_id',
@@ -260,7 +305,7 @@ async function updateEmployeeManager() {
         name: `${employee.first_name} ${employee.last_name}`,
         value: employee.id
     }));
-    employeeChoices.unshift({ name: 'Exit', value: null }); // Add "Exit" option
+    employeeChoices.unshift({ name: 'Exit', value: null });
 
     const { employee_id } = await inquirer.prompt([
         {
@@ -272,10 +317,9 @@ async function updateEmployeeManager() {
     ]);
 
     if (employee_id === null) {
-        return mainMenu(); // Return to main menu if "Exit" is selected
+        return mainMenu();
     }
 
-    // Filter out the selected employee from the list of potential new managers
     const managerChoices = employees
         .filter(employee => employee.id !== employee_id)
         .map(employee => ({
