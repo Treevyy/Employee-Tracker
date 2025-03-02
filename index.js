@@ -344,25 +344,29 @@ async function updateEmployeeManager() {
     mainMenu();
 }
 
-async function viewEmployeesByDepartment() {
-    const departmentsRes = await pool.query('SELECT id, name FROM department');
-    const departments = departmentsRes.rows;
-    const departmentChoices = departments.map(department => ({
-        name: department.name,
-        value: department.id
+async function viewEmployeesByManager() {
+    const managersRes = await pool.query(`
+        SELECT DISTINCT manager.id, manager.first_name, manager.last_name
+        FROM employee
+        INNER JOIN employee AS manager ON employee.manager_id = manager.id
+    `);
+    const managers = managersRes.rows;
+    const managerChoices = managers.map(manager => ({
+        name: `${manager.first_name} ${manager.last_name}`,
+        value: manager.id
     }));
-    departmentChoices.unshift({ name: 'Exit', value: null });
+    managerChoices.unshift({ name: 'Exit', value: null });
 
-    const { department_id } = await inquirer.prompt([
+    const { manager_id } = await inquirer.prompt([
         {
             type: 'list',
-            name: 'department_id',
-            message: 'Select a department to view its employees:',
-            choices: departmentChoices
+            name: 'manager_id',
+            message: 'Select a manager to view their employees:',
+            choices: managerChoices
         }
     ]);
 
-    if (department_id === null) {
+    if (manager_id === null) {
         return mainMenu();
     }
 
@@ -379,13 +383,14 @@ async function viewEmployeesByDepartment() {
         LEFT JOIN role ON employee.role_id = role.id
         LEFT JOIN department ON role.department_id = department.id
         LEFT JOIN employee AS manager ON manager.id = employee.manager_id
-        WHERE department.id = $1
+        WHERE employee.manager_id = $1
         ORDER BY employee.id ASC;
     `;
-    const res = await pool.query(queryText, [department_id]);
+    const res = await pool.query(queryText, [manager_id]);
     console.table(res.rows);
     mainMenu();
 }
+
 
 async function deleteEmployee() {
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
