@@ -391,6 +391,48 @@ async function viewEmployeesByManager() {
     mainMenu();
 }
 
+async function viewEmployeesByDepartment() {
+    const departmentsRes = await pool.query('SELECT id, name FROM department');
+    const departments = departmentsRes.rows;
+    const departmentChoices = departments.map(department => ({
+        name: department.name,
+        value: department.id
+    }));
+    departmentChoices.unshift({ name: 'Exit', value: null });
+
+    const { department_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'department_id',
+            message: 'Select a department to view its employees:',
+            choices: departmentChoices
+        }
+    ]);
+
+    if (department_id === null) {
+        return mainMenu();
+    }
+
+    const queryText = `
+        SELECT
+          employee.id,
+          employee.first_name,
+          employee.last_name,
+          role.title,
+          department.name AS department,
+          role.salary,  
+          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
+        FROM employee
+        LEFT JOIN role ON employee.role_id = role.id
+        LEFT JOIN department ON role.department_id = department.id
+        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
+        WHERE department.id = $1
+        ORDER BY employee.id ASC;
+    `;
+    const res = await pool.query(queryText, [department_id]);
+    console.table(res.rows);
+    mainMenu();
+}
 
 async function deleteEmployee() {
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
