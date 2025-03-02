@@ -4,11 +4,9 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get the directory name in ES modules
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read SQL queries from the queries.sql file
 const queries = fs.readFileSync(path.join(__dirname, 'db', 'queries.sql'), 'utf-8').split(';').map(query => query.trim()).filter(query => query.length > 0);
 
 async function mainMenu() {
