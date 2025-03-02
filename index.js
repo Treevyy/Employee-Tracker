@@ -538,12 +538,13 @@ async function deleteRole() {
 
     if (role_id === null) {
         console.log(`No roles were deleted!`);
-        return;
+        return mainMenu();
     }
 
     const selectedRole = roleChoices.find(role => role.value === role_id);
     await pool.query('DELETE FROM role WHERE id = $1', [role_id]);
     console.log(`Role '${selectedRole.name}' has been deleted!`);
+    mainMenu();
 }
 
 async function deleteEmployee() {
