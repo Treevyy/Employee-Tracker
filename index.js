@@ -15,6 +15,7 @@ const questions = [
             'Add a role',
             'Add an employee',
             'Update an employee role',
+            'Delete an employee',
             'Exit'
         ]
     }
@@ -44,6 +45,9 @@ switch (answers.action) {
     case 'Update an employee role':
         updateEmployeeRole();
         break;
+    case 'Delete an employee':
+        deleteEmployee();
+        break;
     case 'Exit':
         pool.end();
         process.exit();
@@ -71,18 +75,18 @@ async function viewRoles() {
 
 async function viewEmployees() {
     const queryText = `
-        SELECT 
-          employee.id, 
-          employee.first_name, 
-          employee.last_name, 
-          role.title, 
-          role.salary, 
-          department.name AS department, 
+        SELECT
+          employee.id,
+          employee.first_name,
+          employee.last_name,
+          role.title,
+          department.name AS department,
+          role.salary,  
           COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
-        FROM employee 
-        LEFT JOIN role ON employee.role_id = role.id 
-        LEFT JOIN department ON role.department_id = department.id 
-        LEFT JOIN employee AS manager ON manager.id = employee.manager_id 
+        FROM employee
+        LEFT JOIN role ON employee.role_id = role.id
+        LEFT JOIN department ON role.department_id = department.id
+        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
         ORDER BY employee.id ASC;
     `;
     const res = await pool.query(queryText);
@@ -202,7 +206,13 @@ async function updateEmployeeRole() {
         value: role.id
     }));
 
-    const { employee_id, new_role_id } = await inquirer.prompt([
+    const managerChoices = employees.map(employee => ({
+        name: `${employee.first_name} ${employee.last_name}`,
+        value: employee.id
+    }));
+    managerChoices.unshift({ name: 'None', value: null });
+    
+    const { employee_id, new_role_id, new_manager_id} = await inquirer.prompt([
         {
             type: 'list',
             name: 'employee_id',
@@ -214,13 +224,49 @@ async function updateEmployeeRole() {
             name: 'new_role_id',
             message: 'What is the new role of the employee?',
             choices: roleChoices
+        },
+        {
+            type: 'list',
+            name: 'new_manager_id',
+            message: 'Who is the new manager of the employee?',
+            choices: managerChoices
         }
     ]);
 
     const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
 
-    await pool.query('UPDATE employee SET role_id = $1 WHERE id = $2', [new_role_id, employee_id]);
+    await pool.query('UPDATE employee SET role_id = $1, manager_id = $2 WHERE id = $3', [new_role_id, new_manager_id, employee_id]);
     console.log(`Employee role for '${selectedEmployee.name}' has been updated!`);
+    mainMenu();
+}
+
+async function deleteEmployee() {
+    const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
+    const employees = employeesRes.rows;
+
+    const employeeChoices = employees.map(employee => ({
+        name: `${employee.first_name} ${employee.last_name}`,
+        value: employee.id
+    }));
+    employeeChoices.unshift({ name: 'None', value: null });
+
+    const { employee_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'employee_id',
+            message: 'Which employee would you like to terminate?',
+            choices: employeeChoices
+        }
+    ]);
+
+    if (employee_id === null) {
+        console.log(`No employee's were terminated! :)`);
+        return mainMenu();
+    }
+
+    const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
+    await pool.query('DELETE FROM employee WHERE id = $1', [employee_id]);
+    console.log(`Employee '${selectedEmployee.name}' has been terminated! :(`);
     mainMenu();
 }
 
