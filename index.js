@@ -19,6 +19,7 @@ const questions = [
             'View employees by manager',
             'View employees by department',
             'Delete a department',
+            'Delete a role',
             'Delete an employee',
             'Exit'
         ]
@@ -60,6 +61,9 @@ switch (answers.action) {
         break;
     case 'Delete a department':
         deleteDepartment();
+        break;
+    case 'Delete a role':
+        deleteRole();
         break;
     case 'Delete an employee':
         deleteEmployee();
@@ -468,6 +472,37 @@ async function deleteDepartment() {
     await pool.query('DELETE FROM department WHERE id = $1', [department_id]);
     console.log(`Department '${selectedDepartment.name}' has been deleted!`);
     mainMenu();
+}
+
+async function deleteRole() {
+    const rolesRes = await pool.query('SELECT id, title FROM role');
+    const roles = rolesRes.rows;
+    const roleChoices = roles.map(role => ({
+        name: role.title,
+        value: role.id
+    }));
+
+    if (!roleChoices.some(choice => choice.name === 'None')) {
+        roleChoices.unshift({ name: 'None', value: null });
+    }
+
+    const { role_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'role_id',
+            message: 'Which role would you like to delete?',
+            choices: roleChoices
+        }
+    ]);
+
+    if (role_id === null) {
+        console.log(`No roles were deleted!`);
+        return;
+    }
+
+    const selectedRole = roleChoices.find(role => role.value === role_id);
+    await pool.query('DELETE FROM role WHERE id = $1', [role_id]);
+    console.log(`Role '${selectedRole.name}' has been deleted!`);
 }
 
 async function deleteEmployee() {
