@@ -453,6 +453,7 @@ async function viewDepartmentBudget() {
         name: department.name,
         value: department.id
     }));
+    departmentChoices.unshift({ name: 'Exit', value: null });
 
     const { department_id } = await inquirer.prompt([
         {
@@ -462,6 +463,10 @@ async function viewDepartmentBudget() {
             choices: departmentChoices
         }
     ]);
+
+    if (department_id === null) {
+        return mainMenu();
+    }
 
     const queryText = `
         SELECT
