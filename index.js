@@ -18,6 +18,7 @@ const questions = [
             'Update an employee manager',
             'View employees by manager',
             'View employees by department',
+            'View the total utilized budget of a department',
             'Delete a department',
             'Delete a role',
             'Delete an employee',
@@ -58,6 +59,9 @@ switch (answers.action) {
         break;
     case 'View employees by department':
         viewEmployeesByDepartment();
+        break;
+    case 'View the total utilized budget of a department':
+        viewDepartmentBudget();
         break;
     case 'Delete a department':
         deleteDepartment();
@@ -436,6 +440,38 @@ async function viewEmployeesByDepartment() {
         LEFT JOIN employee AS manager ON manager.id = employee.manager_id
         WHERE department.id = $1
         ORDER BY employee.id ASC;
+    `;
+    const res = await pool.query(queryText, [department_id]);
+    console.table(res.rows);
+    mainMenu();
+}
+
+async function viewDepartmentBudget() {
+    const departmentsRes = await pool.query('SELECT id, name FROM department');
+    const departments = departmentsRes.rows;
+    const departmentChoices = departments.map(department => ({
+        name: department.name,
+        value: department.id
+    }));
+
+    const { department_id } = await inquirer.prompt([
+        {
+            type: 'list',
+            name: 'department_id',
+            message: 'Select a department to view its total utilized budget:',
+            choices: departmentChoices
+        }
+    ]);
+
+    const queryText = `
+        SELECT
+          department.name AS department,
+          SUM(role.salary) AS utilized_budget
+        FROM employee
+        LEFT JOIN role ON employee.role_id = role.id
+        LEFT JOIN department ON role.department_id = department.id
+        WHERE department.id = $1
+        GROUP BY department.name;
     `;
     const res = await pool.query(queryText, [department_id]);
     console.table(res.rows);
