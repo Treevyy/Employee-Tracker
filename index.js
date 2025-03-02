@@ -1,119 +1,107 @@
 import inquirer from 'inquirer';
 import pool from './db/config.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Get the directory name in ES modules
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+// Read SQL queries from the queries.sql file
+const queries = fs.readFileSync(path.join(__dirname, 'db', 'queries.sql'), 'utf-8').split(';').map(query => query.trim()).filter(query => query.length > 0);
 
 async function mainMenu() {
-const questions = [
-    {
-        type: 'list',
-        name: 'action',
-        message: 'What would you like to do?',
-        choices: [
-            'View all departments',
-            'View all roles',
-            'View all employees',
-            'Add a department',
-            'Add a role',
-            'Add an employee',
-            'Update an employee role',
-            'Update an employee manager',
-            'View employees by manager',
-            'View employees by department',
-            'View the total utilized budget of a department',
-            'Delete a department',
-            'Delete a role',
-            'Delete an employee',
-            'Exit'
-        ]
-    }
-];
+    const questions = [
+        {
+            type: 'list',
+            name: 'action',
+            message: 'What would you like to do?',
+            choices: [
+                'View all departments',
+                'View all roles',
+                'View all employees',
+                'Add a department',
+                'Add a role',
+                'Add an employee',
+                'Update an employee role',
+                'Update an employee manager',
+                'View employees by manager',
+                'View employees by department',
+                'View the total utilized budget of a department',
+                'Delete a department',
+                'Delete a role',
+                'Delete an employee',
+                'Exit'
+            ]
+        }
+    ];
 
-const answers = await inquirer.prompt(questions);
+    const answers = await inquirer.prompt(questions);
 
-switch (answers.action) {
-    case 'View all departments':
-        viewDepartments();
-        break;
-    case 'View all roles':
-        viewRoles();
-        break;
-    case 'View all employees':
-        viewEmployees();
-        break;
-    case 'Add a department':
-        addDepartment();
-        break;
-    case 'Add a role':
-        addRole();
-        break;
-    case 'Add an employee':
-        addEmployee();
-        break;
-    case 'Update an employee role':
-        updateEmployeeRole();
-        break;
-    case 'Update an employee manager':
-        updateEmployeeManager();
-        break;
-    case 'View employees by manager':
-        viewEmployeesByManager();
-        break;
-    case 'View employees by department':
-        viewEmployeesByDepartment();
-        break;
-    case 'View the total utilized budget of a department':
-        viewDepartmentBudget();
-        break;
-    case 'Delete a department':
-        deleteDepartment();
-        break;
-    case 'Delete a role':
-        deleteRole();
-        break;
-    case 'Delete an employee':
-        deleteEmployee();
-        break;
-    case 'Exit':
-        pool.end();
-        process.exit();
+    switch (answers.action) {
+        case 'View all departments':
+            await viewDepartments();
+            break;
+        case 'View all roles':
+            await viewRoles();
+            break;
+        case 'View all employees':
+            await viewEmployees();
+            break;
+        case 'Add a department':
+            await addDepartment();
+            break;
+        case 'Add a role':
+            await addRole();
+            break;
+        case 'Add an employee':
+            await addEmployee();
+            break;
+        case 'Update an employee role':
+            await updateEmployeeRole();
+            break;
+        case 'Update an employee manager':
+            await updateEmployeeManager();
+            break;
+        case 'View employees by manager':
+            await viewEmployeesByManager();
+            break;
+        case 'View employees by department':
+            await viewEmployeesByDepartment();
+            break;
+        case 'View the total utilized budget of a department':
+            await viewDepartmentBudget();
+            break;
+        case 'Delete a department':
+            await deleteDepartment();
+            break;
+        case 'Delete a role':
+            await deleteRole();
+            break;
+        case 'Delete an employee':
+            await deleteEmployee();
+            break;
+        case 'Exit':
+            pool.end();
+            process.exit();
     }
 }
 
 async function viewDepartments() {
-    const res = await pool.query('SELECT * FROM department');
+    const res = await pool.query(queries[0]);
     console.table(res.rows);
     mainMenu();
 }
 
 async function viewRoles() {
-    const res = await pool.query(`
-        SELECT 
-         role.id, 
-         role.title, 
-         department.name AS department, 
-         role.salary 
-        FROM role 
-        JOIN department ON role.department_id = department.id;`);
+    const res = await pool.query(queries[1]);
     console.table(res.rows);
     mainMenu();
 }
 
 async function viewEmployees() {
-    const queryText = `
-        SELECT
-          employee.id,
-          employee.first_name,
-          employee.last_name,
-          role.title,
-          department.name AS department,
-          role.salary,  
-          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON role.department_id = department.id
-        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
-        ORDER BY employee.id ASC;
-    `;
-    const res = await pool.query(queryText);
+    const res = await pool.query(queries[2]);
     console.table(res.rows);
     mainMenu();
 }
@@ -140,7 +128,7 @@ async function addDepartment() {
         }
     ]);
 
-    await pool.query('INSERT INTO department (name) VALUES ($1)', [name]);
+    await pool.query(queries[3], [name]);
     console.log(`Department '${name}' was added to the database!`);
     mainMenu();
 }
@@ -185,8 +173,8 @@ async function addRole() {
         }
     ]);
 
-    await pool.query(`INSERT INTO role (title, salary, department_id) VALUES ($1, $2, $3)`, [title, salary, department_id]);
-    console.log(`The role '${title} was added to the database!`);
+    await pool.query(queries[4], [title, salary, department_id]);
+    console.log(`The role '${title}' was added to the database!`);
     mainMenu();
 }
 
@@ -247,13 +235,12 @@ async function addEmployee() {
 
     const parsedManagerId = manager_id === '' ? null: manager_id;
     
-    await pool.query('INSERT INTO employee (first_name, last_name, role_id, manager_id) VALUES ($1, $2, $3, $4)', [first_name, last_name, role_id, parsedManagerId]);
+    await pool.query(queries[5], [first_name, last_name, role_id, parsedManagerId]);
     console.log(`Employee '${first_name} ${last_name}' was added to the database!`);
     mainMenu();
 }
 
 async function updateEmployeeRole() {
-
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
     const employees = employeesRes.rows;
     const employeeChoices = employees.map(employee => ({
@@ -305,7 +292,7 @@ async function updateEmployeeRole() {
 
     const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
 
-    await pool.query('UPDATE employee SET role_id = $1, manager_id = $2 WHERE id = $3', [new_role_id, new_manager_id, employee_id]);
+    await pool.query(queries[6], [new_role_id, new_manager_id, employee_id]);
     console.log(`Employee role for '${selectedEmployee.name}' has been updated!`);
     mainMenu();
 }
@@ -351,7 +338,7 @@ async function updateEmployeeManager() {
 
     const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
 
-    await pool.query('UPDATE employee SET manager_id = $1 WHERE id = $2', [new_manager_id, employee_id]);
+    await pool.query(queries[7], [new_manager_id, employee_id]);
     console.log(`Employee manager for '${selectedEmployee.name}' has been updated!`);
     mainMenu();
 }
@@ -382,23 +369,7 @@ async function viewEmployeesByManager() {
         return mainMenu();
     }
 
-    const queryText = `
-        SELECT
-          employee.id,
-          employee.first_name,
-          employee.last_name,
-          role.title,
-          department.name AS department,
-          role.salary,  
-          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON role.department_id = department.id
-        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
-        WHERE employee.manager_id = $1
-        ORDER BY employee.id ASC;
-    `;
-    const res = await pool.query(queryText, [manager_id]);
+    const res = await pool.query(queries[8], [manager_id]);
     console.table(res.rows);
     mainMenu();
 }
@@ -425,23 +396,7 @@ async function viewEmployeesByDepartment() {
         return mainMenu();
     }
 
-    const queryText = `
-        SELECT
-          employee.id,
-          employee.first_name,
-          employee.last_name,
-          role.title,
-          department.name AS department,
-          role.salary,  
-          COALESCE(manager.first_name || ' ' || manager.last_name, 'None') AS employee_manager
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON role.department_id = department.id
-        LEFT JOIN employee AS manager ON manager.id = employee.manager_id
-        WHERE department.id = $1
-        ORDER BY employee.id ASC;
-    `;
-    const res = await pool.query(queryText, [department_id]);
+    const res = await pool.query(queries[9], [department_id]);
     console.table(res.rows);
     mainMenu();
 }
@@ -468,17 +423,7 @@ async function viewDepartmentBudget() {
         return mainMenu();
     }
 
-    const queryText = `
-        SELECT
-          department.name AS department,
-          SUM(role.salary) AS utilized_budget
-        FROM employee
-        LEFT JOIN role ON employee.role_id = role.id
-        LEFT JOIN department ON role.department_id = department.id
-        WHERE department.id = $1
-        GROUP BY department.name;
-    `;
-    const res = await pool.query(queryText, [department_id]);
+    const res = await pool.query(queries[10], [department_id]);
     console.table(res.rows);
     mainMenu();
 }
@@ -510,7 +455,7 @@ async function deleteDepartment() {
     }
 
     const selectedDepartment = departmentChoices.find(department => department.value === department_id);
-    await pool.query('DELETE FROM department WHERE id = $1', [department_id]);
+    await pool.query(queries[11], [department_id]);
     console.log(`Department '${selectedDepartment.name}' has been deleted!`);
     mainMenu();
 }
@@ -542,7 +487,7 @@ async function deleteRole() {
     }
 
     const selectedRole = roleChoices.find(role => role.value === role_id);
-    await pool.query('DELETE FROM role WHERE id = $1', [role_id]);
+    await pool.query(queries[12], [role_id]);
     console.log(`Role '${selectedRole.name}' has been deleted!`);
     mainMenu();
 }
@@ -572,7 +517,7 @@ async function deleteEmployee() {
     }
 
     const selectedEmployee = employeeChoices.find(employee => employee.value === employee_id);
-    await pool.query('DELETE FROM employee WHERE id = $1', [employee_id]);
+    await pool.query(queries[13], [employee_id]);
     console.log(`Employee '${selectedEmployee.name}' has been terminated! :(`);
     mainMenu();
 }
