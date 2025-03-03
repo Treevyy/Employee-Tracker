@@ -4,18 +4,16 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
-// Get current file and directory paths
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-// Read external SQL queries file and split into individual statements
 const queriesPath = path.join(__dirname, 'db', 'queries.sql');
 const queries = fs.readFileSync(queriesPath, 'utf-8')
     .split(';')
     .map(query => query.trim())
     .filter(query => query.length > 0);
 
-// Map query names to positions in the queries file
 const getQuery = (name) => {
     const queryMap = {
         viewDepartments: queries[0],
@@ -121,7 +119,6 @@ async function viewDepartments() {
 }
 
 async function viewRoles() {
-    // Using the external query to get all roles
     const queryText = getQuery('viewRoles');
     const res = await pool.query(queryText);
     console.table(res.rows);
@@ -170,7 +167,6 @@ async function addRole() {
     ]);
     if (!confirm) return mainMenu();
 
-    // Get departments for department choices
     const depQuery = getQuery('viewDepartments');
     const departmentsRes = await pool.query(depQuery);
     const departmentChoices = departmentsRes.rows.map(dept => ({ name: dept.name, value: dept.id }));
@@ -210,7 +206,6 @@ async function addEmployee() {
     ]);
     if (!confirm) return mainMenu();
 
-    // Retrieve employee and role choices for prompts
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
     const rolesRes = await pool.query(getQuery('viewRoles'));
     const roleChoices = rolesRes.rows.map(role => ({ name: role.title, value: role.id }));
@@ -251,7 +246,6 @@ async function addEmployee() {
 }
 
 async function updateEmployeeRole() {
-    // Get employees and roles for choices
     const employeesRes = await pool.query('SELECT id, first_name, last_name FROM employee');
     const rolesRes = await pool.query(getQuery('viewRoles'));
     const employeeChoices = employeesRes.rows.map(emp => ({
@@ -314,7 +308,6 @@ async function updateEmployeeManager() {
     ]);
     if (employee_id === null) return mainMenu();
 
-    // Filter out the selected employee from the manager choices
     const managerChoices = employeesRes.rows
         .filter(emp => emp.id !== employee_id)
         .map(emp => ({ name: `${emp.first_name} ${emp.last_name}`, value: emp.id }));
@@ -414,7 +407,7 @@ async function deleteDepartment() {
         name: dept.name,
         value: dept.id
     }));
-    // Optionally add an exit or none option
+
     if (!departmentChoices.some(choice => choice.name === 'None')) {
         departmentChoices.unshift({ name: 'None', value: null });
     }
