@@ -87,6 +87,9 @@ async function mainMenu() {
         case 'Update an employee manager':
             await updateEmployeeManager();
             break;
+        case 'Update an employee salary':
+            await updateEmployeeSalary();
+            break;
         case 'View employees by manager':
             await viewEmployeesByManager();
             break;
