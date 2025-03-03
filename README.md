@@ -86,7 +86,7 @@
   5. Open a pull request
 
   ## Contributors
-  All of these tutors helped me revise and edit my code to function properly during through tutoring sessions. Thank you for all your help!
+  All of these tutors helped me revise and edit my code to function properly during the tutoring sessions. Thank you for all your help!
 
   1. Treevyy aka Trevor Moore the main contributor to the assignment.
 
